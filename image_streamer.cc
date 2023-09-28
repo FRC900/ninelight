@@ -610,6 +610,8 @@ void Connection::OnOfferCreated(GstPromise *promise) {
   server_->execute(std::make_shared<UpdateData>(sock_, fbb.Release()));
 }
 
+// On a new negotiation, create an Offer
+// Using Connection::OnOfferCreatedCallback, but idk where that is
 void Connection::OnNegotiationNeeded() {
   LOG(INFO) << "OnNegotiationNeeded";
 
@@ -619,11 +621,15 @@ void Connection::OnNegotiationNeeded() {
   g_signal_emit_by_name(G_OBJECT(webrtcbin_), "create-offer", NULL, promise);
 }
 
+// When we get an ICE candidate,
+// Do something???
 void Connection::OnIceCandidate(guint mline_index, gchar *candidate) {
   LOG(INFO) << "OnIceCandidate";
 
+  // Create a buffer
   flatbuffers::FlatBufferBuilder fbb(512);
 
+  // Add some sdp config things
   auto ice_fb_builder = WebSocketIce::Builder(fbb);
   ice_fb_builder.add_sdp_m_line_index(mline_index);
   ice_fb_builder.add_sdp_mid(fbb.CreateString("video0"));
@@ -631,6 +637,7 @@ void Connection::OnIceCandidate(guint mline_index, gchar *candidate) {
       fbb.CreateString(static_cast<char *>(candidate)));
   flatbuffers::Offset<WebSocketIce> ice_fb = ice_fb_builder.Finish();
 
+  // Create a message
   flatbuffers::Offset<WebSocketMessage> ice_message =
       CreateWebSocketMessage(fbb, Payload::WebSocketIce, ice_fb.Union());
   fbb.Finish(ice_message);
@@ -641,6 +648,8 @@ void Connection::OnIceCandidate(guint mline_index, gchar *candidate) {
                         candidate);
 }
 
+// If the payload is for the SDP,
+// 
 void Connection::HandleWebSocketData(const uint8_t *data, size_t /* size*/) {
   LOG(INFO) << "HandleWebSocketData";
 
